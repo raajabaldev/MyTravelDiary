@@ -1,0 +1,712 @@
+@layer reset, base, theme, components, utilities;
+
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  img,
+  svg {
+    display: block;
+    max-inline-size: 100%;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+@layer theme {
+  :root {
+    /* Paper & Ink Foundations */
+    --paper-cream: #faf6ee;
+    --paper-warm: #f3ebdc;
+    --paper-card: #fffdf8;
+    --paper-polaroid: #fcfbf7;
+    --paper-lined: #f7f1e5;
+
+    --ink-espresso: #362c25;
+    --ink-sepia: #65574c;
+    --ink-muted: #86776a;
+    --ink-faint: #d6c8b6;
+
+    /* Pastel Scrapbook Palette */
+    --sage-bg: #e2ebe0;
+    --sage-mid: #a4bc9f;
+    --sage-deep: #4e694a;
+
+    --pink-bg: #f6e2e2;
+    --pink-mid: #db9fa3;
+    --pink-deep: #915258;
+
+    --butter-bg: #fbf0cb;
+    --butter-mid: #ecd07b;
+    --butter-deep: #856718;
+
+    --blue-bg: #e0ebf2;
+    --blue-mid: #99b4ca;
+    --blue-deep: #42617b;
+
+    /* Typography */
+    --font-hand: 'Caveat', 'Segoe Print', 'Comic Sans MS', cursive;
+    --font-note: 'Patrick Hand', 'Caveat', cursive;
+    --font-serif: 'Lora', Georgia, 'Times New Roman', serif;
+    --font-stamp: 'Courier Prime', 'Courier New', monospace;
+
+    /* Elevations */
+    --shadow-paper: 0 3px 10px rgb(54 44 37 / 0.08), 0 1px 3px rgb(54 44 37 / 0.06);
+    --shadow-polaroid: 0 8px 22px rgb(54 44 37 / 0.13), 0 2px 5px rgb(54 44 37 / 0.07);
+    --shadow-polaroid-hover: 0 16px 34px rgb(54 44 37 / 0.18), 0 4px 10px rgb(54 44 37 / 0.1);
+
+    /* Radii & Spacing */
+    --radius-soft: 14px;
+    --radius-card: 18px;
+    --focus-ring: #915258;
+  }
+}
+
+@layer base {
+  body {
+    background-color: var(--paper-cream);
+    color: var(--ink-espresso);
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    line-height: 1.65;
+    min-block-size: 100dvh;
+    overflow-x: clip;
+    /* Layered warm paper fiber texture & subtle speckle */
+    background-image:
+      radial-gradient(rgb(134 119 106 / 0.09) 1px, transparent 0),
+      radial-gradient(rgb(164 188 159 / 0.1) 1.2px, transparent 0),
+      linear-gradient(180deg, #fbf8f1 0%, #f5ede0 100%);
+    background-size: 28px 28px, 47px 47px, 100% 100%;
+    background-position: 0 0, 14px 19px, 0 0;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-hand);
+    font-weight: 700;
+    line-height: 1.15;
+    margin-block: 0;
+    color: var(--ink-espresso);
+    text-wrap: balance;
+  }
+
+  p {
+    margin-block: 0;
+    text-wrap: pretty;
+  }
+
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  :where(button, a) {
+    transition:
+      transform 180ms ease-out,
+      box-shadow 180ms ease-out,
+      background-color 180ms ease-out,
+      border-color 180ms ease-out;
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+@layer components {
+  .skip-link {
+    position: fixed;
+    inset-block-start: -100px;
+    inset-inline-start: 1rem;
+    z-index: 100;
+    padding: 0.6rem 1.1rem;
+    background: var(--paper-card);
+    border: 2px solid var(--ink-espresso);
+    border-radius: 999px;
+    font-family: var(--font-note);
+    text-decoration: none;
+    color: var(--ink-espresso);
+  }
+
+  .skip-link:focus {
+    inset-block-start: 1rem;
+  }
+
+  /* Scrapbook Outer Shell */
+  .journal-shell {
+    max-inline-size: 1200px;
+    margin-inline: auto;
+    padding-inline: clamp(0.9rem, 2.5vw, 2rem);
+    padding-block-end: 4rem;
+  }
+
+  /* Top Scrapbook Binder Header */
+  .journal-header {
+    position: relative;
+    padding-block: 1.25rem 0.75rem;
+    margin-block-end: 1.75rem;
+    border-block-end: 2px dashed var(--ink-faint);
+  }
+
+  .journal-header-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-end: 1rem;
+  }
+
+  .journal-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    background: none;
+    border: none;
+    padding: 0.25rem 0.4rem;
+    text-align: start;
+  }
+
+  .journal-brand-title {
+    font-family: var(--font-hand);
+    font-size: clamp(1.75rem, 3vw, 2.35rem);
+    font-weight: 700;
+    color: var(--ink-espresso);
+    line-height: 1;
+  }
+
+  .journal-brand-sub {
+    display: block;
+    font-family: var(--font-stamp);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-sepia);
+    margin-block-start: 0.2rem;
+  }
+
+  .journal-status-area {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  /* Notebook Ribbon Tabs */
+  .journal-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .nav-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-block-size: 42px;
+    padding: 0.5rem 1.05rem;
+    border-radius: 12px 12px 6px 6px;
+    border: 1.5px solid var(--ink-faint);
+    background-color: var(--paper-card);
+    font-family: var(--font-note);
+    font-size: 1.05rem;
+    color: var(--ink-sepia);
+    box-shadow: 0 2px 0 rgb(54 44 37 / 0.06);
+  }
+
+  .nav-tab:hover {
+    transform: translateY(-2px);
+    border-color: var(--ink-muted);
+    color: var(--ink-espresso);
+  }
+
+  .nav-tab[aria-current='page'] {
+    background-color: var(--butter-bg);
+    border-color: var(--butter-deep);
+    color: var(--ink-espresso);
+    box-shadow: 0 3px 0 rgb(133 103 24 / 0.2);
+  }
+
+  .nav-tab-add {
+    margin-inline-start: auto;
+    background-color: var(--pink-bg);
+    border-color: var(--pink-mid);
+    color: var(--pink-deep);
+    font-weight: 600;
+  }
+
+  .nav-tab-add[aria-current='page'],
+  .nav-tab-add:hover {
+    background-color: #efcfd0;
+    border-color: var(--pink-deep);
+    color: var(--ink-espresso);
+  }
+
+  /* Scrapbook Paper Surface Variants */
+  .paper-sheet {
+    position: relative;
+    background-color: var(--paper-card);
+    border: 1.5px solid var(--ink-faint);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-paper);
+    padding: clamp(1.25rem, 3vw, 2.4rem);
+  }
+
+  .paper-sheet--lined {
+    background-color: var(--paper-card);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 31px,
+      rgb(153 180 202 / 0.26) 31px,
+      rgb(153 180 202 / 0.26) 32px
+    );
+    background-position: 0 18px;
+  }
+
+  .paper-sheet--dotted {
+    background-color: var(--paper-card);
+    background-image: radial-gradient(rgb(134 119 106 / 0.25) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .theme-sage {
+    --accent-bg: var(--sage-bg);
+    --accent-mid: var(--sage-mid);
+    --accent-deep: var(--sage-deep);
+  }
+
+  .theme-pink {
+    --accent-bg: var(--pink-bg);
+    --accent-mid: var(--pink-mid);
+    --accent-deep: var(--pink-deep);
+  }
+
+  .theme-butter {
+    --accent-bg: var(--butter-bg);
+    --accent-mid: var(--butter-mid);
+    --accent-deep: var(--butter-deep);
+  }
+
+  .theme-blue {
+    --accent-bg: var(--blue-bg);
+    --accent-mid: var(--blue-mid);
+    --accent-deep: var(--blue-deep);
+  }
+
+  /* Washi Tape Strips */
+  .washi-tape {
+    position: absolute;
+    inline-size: 96px;
+    block-size: 24px;
+    opacity: 0.85;
+    pointer-events: none;
+    z-index: 3;
+    clip-path: polygon(
+      2% 0%,
+      97% 2%,
+      100% 24%,
+      96% 52%,
+      99% 79%,
+      97% 100%,
+      3% 98%,
+      0% 74%,
+      4% 48%,
+      1% 22%
+    );
+    box-shadow: 0 1px 3px rgb(54 44 37 / 0.12);
+  }
+
+  .washi-tape--sage {
+    background: repeating-linear-gradient(
+      45deg,
+      rgb(164 188 159 / 0.78),
+      rgb(164 188 159 / 0.78) 8px,
+      rgb(226 235 224 / 0.85) 8px,
+      rgb(226 235 224 / 0.85) 16px
+    );
+  }
+
+  .washi-tape--pink {
+    background: repeating-linear-gradient(
+      -45deg,
+      rgb(219 159 163 / 0.78),
+      rgb(219 159 163 / 0.78) 8px,
+      rgb(246 226 226 / 0.88) 8px,
+      rgb(246 226 226 / 0.88) 16px
+    );
+  }
+
+  .washi-tape--butter {
+    background: radial-gradient(rgb(255 253 248 / 0.85) 20%, transparent 22%),
+      rgb(236 208 123 / 0.82);
+    background-size: 12px 12px;
+  }
+
+  .washi-tape--blue {
+    background: repeating-linear-gradient(
+      90deg,
+      rgb(153 180 202 / 0.8),
+      rgb(153 180 202 / 0.8) 10px,
+      rgb(224 235 242 / 0.85) 10px,
+      rgb(224 235 242 / 0.85) 18px
+    );
+  }
+
+  /* Polaroid Frame */
+  .polaroid {
+    position: relative;
+    background-color: var(--paper-polaroid);
+    padding: 12px 12px 20px;
+    border: 1px solid rgb(214 200 182 / 0.75);
+    border-radius: 4px;
+    box-shadow: var(--shadow-polaroid);
+    transition:
+      transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 240ms ease-out;
+  }
+
+  .polaroid:hover,
+  .polaroid:focus-within {
+    box-shadow: var(--shadow-polaroid-hover);
+    z-index: 4;
+  }
+
+  .polaroid-img-wrap {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    inline-size: 100%;
+    overflow: hidden;
+    background-color: var(--paper-warm);
+    border: 1px solid rgb(54 44 37 / 0.08);
+  }
+
+  .polaroid-img-wrap--square {
+    aspect-ratio: 1 / 1;
+  }
+
+  .polaroid-img-wrap--tall {
+    aspect-ratio: 4 / 5;
+  }
+
+  .polaroid-img-wrap img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .polaroid-caption {
+    margin-block-start: 0.7rem;
+    font-family: var(--font-hand);
+    font-size: 1.32rem;
+    line-height: 1.2;
+    color: var(--ink-espresso);
+  }
+
+  .polaroid-meta {
+    margin-block-start: 0.25rem;
+    font-family: var(--font-stamp);
+    font-size: 0.76rem;
+    color: var(--ink-sepia);
+  }
+
+  /* Decorative Stamp Badge */
+  .postage-stamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    background-color: var(--paper-card);
+    border: 2px dashed var(--ink-muted);
+    border-radius: 6px;
+    font-family: var(--font-stamp);
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-sepia);
+    box-shadow: 0 2px 0 rgb(54 44 37 / 0.06);
+  }
+
+  .postage-stamp--sage {
+    background-color: var(--sage-bg);
+    border-color: var(--sage-deep);
+    color: var(--sage-deep);
+  }
+
+  .postage-stamp--pink {
+    background-color: var(--pink-bg);
+    border-color: var(--pink-deep);
+    color: var(--pink-deep);
+  }
+
+  .postage-stamp--butter {
+    background-color: var(--butter-bg);
+    border-color: var(--butter-deep);
+    color: var(--butter-deep);
+  }
+
+  .postage-stamp--blue {
+    background-color: var(--blue-bg);
+    border-color: var(--blue-deep);
+    color: var(--blue-deep);
+  }
+
+  /* Handcrafted Buttons */
+  .btn-scrapbook {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-block-size: 44px;
+    padding: 0.6rem 1.35rem;
+    border-radius: 999px;
+    border: 2px solid var(--ink-espresso);
+    background-color: var(--butter-bg);
+    color: var(--ink-espresso);
+    font-family: var(--font-note);
+    font-size: 1.12rem;
+    text-decoration: none;
+    box-shadow: 0 3px 0 var(--ink-espresso);
+  }
+
+  .btn-scrapbook:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 0 var(--ink-espresso);
+  }
+
+  .btn-scrapbook--pink {
+    background-color: var(--pink-bg);
+    border-color: var(--pink-deep);
+    box-shadow: 0 3px 0 var(--pink-deep);
+  }
+
+  .btn-scrapbook--pink:hover:not(:disabled) {
+    box-shadow: 0 5px 0 var(--pink-deep);
+  }
+
+  .btn-scrapbook--sage {
+    background-color: var(--sage-bg);
+    border-color: var(--sage-deep);
+    box-shadow: 0 3px 0 var(--sage-deep);
+  }
+
+  .btn-scrapbook--sage:hover:not(:disabled) {
+    box-shadow: 0 5px 0 var(--sage-deep);
+  }
+
+  .btn-scrapbook--ghost {
+    background-color: var(--paper-card);
+    border-color: var(--ink-muted);
+    box-shadow: 0 2px 0 var(--ink-faint);
+    color: var(--ink-sepia);
+  }
+
+  .btn-scrapbook--danger {
+    background-color: #fae5e5;
+    border-color: #9e3a3a;
+    color: #7c2424;
+    box-shadow: 0 2px 0 #9e3a3a;
+  }
+
+  .btn-scrapbook:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  /* Scrapbook Inputs */
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .field-label {
+    font-family: var(--font-hand);
+    font-size: 1.38rem;
+    font-weight: 700;
+    color: var(--ink-espresso);
+  }
+
+  .field-hint {
+    font-size: 0.85rem;
+    color: var(--ink-sepia);
+  }
+
+  .field-input,
+  .field-textarea,
+  .field-select {
+    inline-size: 100%;
+    padding: 0.7rem 0.95rem;
+    background-color: rgb(255 253 248 / 0.9);
+    border: 1.5px solid var(--ink-faint);
+    border-radius: 10px;
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    color: var(--ink-espresso);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .field-input:focus,
+  .field-textarea:focus,
+  .field-select:focus {
+    border-color: var(--sage-deep);
+    box-shadow: 0 0 0 3px rgb(164 188 159 / 0.25);
+  }
+
+  .field-textarea {
+    min-block-size: 150px;
+    resize: vertical;
+    line-height: 1.7;
+  }
+
+  /* Organic Gallery Grid */
+  .polaroid-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+    gap: 2.1rem 1.85rem;
+    padding-block: 0.75rem;
+  }
+
+  .polaroid-tilt-0 {
+    transform: rotate(-1.6deg);
+  }
+
+  .polaroid-tilt-1 {
+    transform: rotate(1.4deg);
+  }
+
+  .polaroid-tilt-2 {
+    transform: rotate(-0.8deg);
+  }
+
+  .polaroid-tilt-3 {
+    transform: rotate(2deg);
+  }
+
+  .polaroid-tilt-0:hover,
+  .polaroid-tilt-1:hover,
+  .polaroid-tilt-2:hover,
+  .polaroid-tilt-3:hover {
+    transform: rotate(0deg) translateY(-6px);
+  }
+
+  /* Native Modal Dialog */
+  dialog.scrapbook-dialog {
+    margin: auto;
+    padding: 0;
+    border: 2px solid var(--ink-espresso);
+    border-radius: var(--radius-card);
+    background-color: var(--paper-card);
+    color: var(--ink-espresso);
+    max-inline-size: min(92vw, 680px);
+    inline-size: 100%;
+    box-shadow: 0 24px 60px rgb(54 44 37 / 0.32);
+    overflow: visible;
+  }
+
+  dialog.scrapbook-dialog::backdrop {
+    background: rgb(54 44 37 / 0.45);
+    backdrop-filter: blur(3px);
+  }
+
+  dialog.lightbox-dialog {
+    margin: auto;
+    padding: 1rem;
+    border: none;
+    background: transparent;
+    max-inline-size: min(94vw, 940px);
+    max-block-size: 92dvh;
+  }
+
+  dialog.lightbox-dialog::backdrop {
+    background: rgb(35 28 24 / 0.82);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Banner Alerts */
+  .journal-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.9rem 1.15rem;
+    border-radius: 12px;
+    border: 1.5px solid var(--ink-faint);
+    background-color: var(--butter-bg);
+    color: var(--ink-espresso);
+    font-size: 0.95rem;
+  }
+
+  .journal-alert--error {
+    background-color: #fbe7e7;
+    border-color: #c57171;
+    color: #6b2222;
+  }
+
+  .journal-alert--success {
+    background-color: var(--sage-bg);
+    border-color: var(--sage-deep);
+    color: #2b4428;
+  }
+}
+
+/* Gentle floating animation for decorative airplane / clouds */
+@media (prefers-reduced-motion: no-preference) {
+  .float-gentle {
+    animation: float-gentle 6s ease-in-out infinite;
+  }
+
+  @keyframes float-gentle {
+    0%,
+    100% {
+      transform: translateY(0px) rotate(-1deg);
+    }
+    50% {
+      transform: translateY(-6px) rotate(1deg);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 720px) {
+  .nav-tab-add {
+    margin-inline-start: 0;
+  }
+
+  .polaroid-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
