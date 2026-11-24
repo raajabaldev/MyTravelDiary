@@ -9,6 +9,7 @@ import { FoldedMapDoodle, WashiTape } from '../components/ScrapbookDoodles';
 interface TravelMapPageProps {
   destinations: Destination[];
   loading: boolean;
+  isOwner: boolean;
   onNavigate: (route: PageRoute) => void;
 }
 
@@ -17,6 +18,7 @@ type MapFilter = 'all' | 'visited' | 'wishlist';
 export const TravelMapPage: React.FC<TravelMapPageProps> = ({
   destinations,
   loading,
+  isOwner,
   onNavigate,
 }) => {
   const [filter, setFilter] = useState<MapFilter>('all');
@@ -248,7 +250,9 @@ export const TravelMapPage: React.FC<TravelMapPageProps> = ({
         <section className="paper-sheet" style={{ backgroundColor: 'var(--paper-warm)' }}>
           <h2 style={{ fontSize: '1.75rem' }}>Places Without Map Pins ({unpinned.length})</h2>
           <p className="field-hint" style={{ marginBlockStart: '0.25rem' }}>
-            Open any destination below and click &ldquo;Edit Page&rdquo; → &ldquo;Locate / Edit Pin&rdquo; to place it on the map.
+            {isOwner
+              ? 'Open any destination below and click "Edit Page" → "Locate / Edit Pin" to place it on the map.'
+              : 'Click any destination below to open its scrapbook page.'}
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.55rem', marginBlockStart: '0.85rem' }}>
             {unpinned.map((d) => (

@@ -31,6 +31,7 @@ interface DbDestinationRow {
   is_wishlist: boolean;
   wishlist_notes: string;
   is_featured: boolean;
+  is_published: boolean;
   latitude: number | null;
   longitude: number | null;
   paper_theme: string;
@@ -51,6 +52,13 @@ interface DbPhotoRow {
   rotation_deg: number;
   tape_style: string;
   created_at: string;
+}
+
+const activeVisitorBlobUrls = new Set<string>();
+
+export function revokeVisitorPhotoUrls(): void {
+  activeVisitorBlobUrls.forEach((url) => URL.revokeObjectURL(url));
+  activeVisitorBlobUrls.clear();
 }
 
 function asPaperTheme(val: string): PaperTheme {
@@ -86,18 +94,83 @@ async function requireSupabaseUser() {
   }
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
-    throw new Error('Please unlock your travel journal first.');
+    throw new Error('Owner authentication required to modify this journal.');
   }
   return { client: supabase, userId: data.user.id };
 }
 
-export async function listDestinations(mode: BackendMode): Promise<Destination[]> {
-  if (mode === 'local-preview') {
-    return listLocalDestinations();
+export async function checkIsJournalOwner(): Promise<boolean> {
+  if (!supabase) return false;
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return false;
+
+  const { data, error } = await supabase
+    .from('journal_owners')
+    .select('user_id')
+    .eq('user_id', userData.user.id)
+    .maybeSingle();
+
+  if (error) return false;
+  return Boolean(data?.user_id);
+}
+
+async function resolveStoragePhotoUrls(
+  paths: string[],
+  isAuthenticatedOwner: boolean
+): Promise<Map<string, string>> {
+  const urlMap = new Map<string, string>();
+  if (!supabase || paths.length === 0) return urlMap;
+
+  if (isAuthenticatedOwner) {
+    const { data: signedList, error: signedError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrls(paths, 60 * 60);
+
+    if (signedError) {
+      throw new Error(`Could not unlock photographs: ${signedError.message}`);
+    }
+
+    for (const item of signedList ?? []) {
+      if (item.path && item.signedUrl) {
+        urlMap.set(item.path, item.signedUrl);
+      }
+    }
+    return urlMap;
   }
 
-  const { client } = await requireSupabaseUser();
-  const { data, error } = await client
+  // Anonymous visitors read published photos through RLS-protected Storage download()
+  revokeVisitorPhotoUrls();
+  await Promise.all(
+    paths.map(async (storagePath) => {
+      const { data: blob, error } = await supabase!.storage
+        .from(STORAGE_BUCKET)
+        .download(storagePath);
+
+      if (!error && blob) {
+        const objectUrl = URL.createObjectURL(blob);
+        activeVisitorBlobUrls.add(objectUrl);
+        urlMap.set(storagePath, objectUrl);
+      }
+    })
+  );
+
+  return urlMap;
+}
+
+export async function listDestinations(
+  mode: BackendMode,
+  options?: { isOwner?: boolean }
+): Promise<Destination[]> {
+  if (mode === 'local-preview') {
+    const allLocal = await listLocalDestinations();
+    return options?.isOwner ? allLocal : allLocal.filter((d) => d.isPublished);
+  }
+
+  if (!supabase) {
+    throw new Error('Supabase client is not configured.');
+  }
+
+  let query = supabase
     .from('destinations')
     .select(
       `
@@ -111,6 +184,7 @@ export async function listDestinations(mode: BackendMode): Promise<Destination[]
       is_wishlist,
       wishlist_notes,
       is_featured,
+      is_published,
       latitude,
       longitude,
       paper_theme,
@@ -133,8 +207,14 @@ export async function listDestinations(mode: BackendMode): Promise<Destination[]
     )
     .order('created_at', { ascending: false });
 
+  if (!options?.isOwner) {
+    query = query.eq('is_published', true);
+  }
+
+  const { data, error } = await query;
+
   if (error) {
-    throw new Error(`Could not load your scrapbook: ${error.message}`);
+    throw new Error(`Could not load the travel journal: ${error.message}`);
   }
 
   const rows = (data ?? []) as DbDestinationRow[];
@@ -142,22 +222,10 @@ export async function listDestinations(mode: BackendMode): Promise<Destination[]
     (r.destination_photos ?? []).map((p) => p.storage_path)
   );
 
-  const signedUrlMap = new Map<string, string>();
-  if (allPaths.length > 0) {
-    const { data: signedList, error: signedError } = await client.storage
-      .from(STORAGE_BUCKET)
-      .createSignedUrls(allPaths, 60 * 60);
-
-    if (signedError) {
-      throw new Error(`Could not unlock private photographs: ${signedError.message}`);
-    }
-
-    for (const item of signedList ?? []) {
-      if (item.path && item.signedUrl) {
-        signedUrlMap.set(item.path, item.signedUrl);
-      }
-    }
-  }
+  const resolvedUrls = await resolveStoragePhotoUrls(
+    allPaths,
+    Boolean(options?.isOwner)
+  );
 
   return rows.map((row) => {
     const photos: DestinationPhoto[] = (row.destination_photos ?? [])
@@ -165,7 +233,7 @@ export async function listDestinations(mode: BackendMode): Promise<Destination[]
         id: p.id,
         destinationId: p.destination_id,
         storagePath: p.storage_path,
-        url: signedUrlMap.get(p.storage_path) ?? '',
+        url: resolvedUrls.get(p.storage_path) ?? '',
         caption: p.caption,
         isCover: p.is_cover,
         sortOrder: p.sort_order,
@@ -185,6 +253,7 @@ export async function listDestinations(mode: BackendMode): Promise<Destination[]
       isWishlist: row.is_wishlist,
       wishlistNotes: row.wishlist_notes,
       isFeatured: row.is_featured,
+      isPublished: row.is_published,
       latitude: row.latitude,
       longitude: row.longitude,
       paperTheme: asPaperTheme(row.paper_theme),
@@ -288,6 +357,7 @@ export async function createDestination(
       is_wishlist: payload.isWishlist,
       wishlist_notes: payload.wishlistNotes.trim(),
       is_featured: payload.isFeatured,
+      is_published: payload.isPublished,
       latitude: payload.latitude,
       longitude: payload.longitude,
       paper_theme: payload.paperTheme,
@@ -330,6 +400,7 @@ export async function updateDestination(
   if (updates.isWishlist !== undefined) dbPayload.is_wishlist = updates.isWishlist;
   if (updates.wishlistNotes !== undefined) dbPayload.wishlist_notes = updates.wishlistNotes.trim();
   if (updates.isFeatured !== undefined) dbPayload.is_featured = updates.isFeatured;
+  if (updates.isPublished !== undefined) dbPayload.is_published = updates.isPublished;
   if (updates.latitude !== undefined) dbPayload.latitude = updates.latitude;
   if (updates.longitude !== undefined) dbPayload.longitude = updates.longitude;
   if (updates.paperTheme !== undefined) dbPayload.paper_theme = updates.paperTheme;
@@ -485,4 +556,3 @@ export async function deletePhoto(
     }
   }
 }
-

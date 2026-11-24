@@ -22,6 +22,7 @@ interface StoredDestinationRecord {
   isWishlist: boolean;
   wishlistNotes: string;
   isFeatured: boolean;
+  isPublished?: boolean;
   latitude: number | null;
   longitude: number | null;
   paperTheme: PaperTheme;
@@ -130,6 +131,7 @@ export async function listLocalDestinations(): Promise<Destination[]> {
   return destRecords
     .map((d) => ({
       ...d,
+      isPublished: d.isPublished ?? true,
       photos: (photosByDest.get(d.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder),
     }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -150,6 +152,7 @@ export async function createLocalDestination(payload: CreateDestinationPayload):
     isWishlist: payload.isWishlist,
     wishlistNotes: payload.wishlistNotes,
     isFeatured: payload.isFeatured,
+    isPublished: payload.isPublished ?? true,
     latitude: payload.latitude,
     longitude: payload.longitude,
     paperTheme: payload.paperTheme,

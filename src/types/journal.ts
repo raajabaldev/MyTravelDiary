@@ -39,6 +39,7 @@ export interface Destination {
   isWishlist: boolean;
   wishlistNotes: string;
   isFeatured: boolean;
+  isPublished: boolean;
   latitude: number | null;
   longitude: number | null;
   paperTheme: PaperTheme;
@@ -67,6 +68,7 @@ export interface CreateDestinationPayload {
   isWishlist: boolean;
   wishlistNotes: string;
   isFeatured: boolean;
+  isPublished: boolean;
   latitude: number | null;
   longitude: number | null;
   paperTheme: PaperTheme;
@@ -83,6 +85,7 @@ export interface UpdateDestinationPayload {
   isWishlist?: boolean;
   wishlistNotes?: string;
   isFeatured?: boolean;
+  isPublished?: boolean;
   latitude?: number | null;
   longitude?: number | null;
   paperTheme?: PaperTheme;

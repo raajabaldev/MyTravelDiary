@@ -31,6 +31,7 @@ import {
 interface WishlistPageProps {
   destinations: Destination[];
   loading: boolean;
+  isOwner: boolean;
   onCreateWishlist: (payload: CreateDestinationPayload) => Promise<string>;
   onUpdateDestination: (id: string, updates: UpdateDestinationPayload) => Promise<void>;
   onDeleteDestination: (destination: Destination) => Promise<void>;
@@ -40,6 +41,7 @@ interface WishlistPageProps {
 export const WishlistPage: React.FC<WishlistPageProps> = ({
   destinations,
   loading,
+  isOwner,
   onCreateWishlist,
   onUpdateDestination,
   onDeleteDestination,
@@ -106,6 +108,7 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({
         isWishlist: true,
         wishlistNotes: notes.trim(),
         isFeatured: false,
+        isPublished: true,
         latitude: resolvedCoords ? resolvedCoords.lat : null,
         longitude: resolvedCoords ? resolvedCoords.lng : null,
         paperTheme: 'butter',
@@ -203,14 +206,16 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({
             <div style={{ inlineSize: '68px' }}>
               <StarsDoodle />
             </div>
-            <button
-              type="button"
-              className="btn-scrapbook"
-              onClick={() => setShowForm((v) => !v)}
-            >
-              <PlusCircle size={18} aria-hidden="true" />
-              {showForm ? 'Close Form' : 'Add Dream Destination'}
-            </button>
+            {isOwner && (
+              <button
+                type="button"
+                className="btn-scrapbook"
+                onClick={() => setShowForm((v) => !v)}
+              >
+                <PlusCircle size={18} aria-hidden="true" />
+                {showForm ? 'Close Form' : 'Add Dream Destination'}
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -221,7 +226,7 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({
         </div>
       )}
 
-      {showForm && (
+      {isOwner && showForm && (
         <form
           onSubmit={handleAddWishlist}
           className="paper-sheet paper-sheet--lined"
@@ -366,11 +371,15 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({
               <FlowersDoodle />
             </div>
           </div>
-          <h2 style={{ fontSize: '2.1rem' }}>Your wishlist pinboard is open</h2>
+          <h2 style={{ fontSize: '2.1rem' }}>
+            {isOwner ? 'Your wishlist pinboard is open' : 'No wishlist postcards published yet'}
+          </h2>
           <p style={{ color: 'var(--ink-sepia)', marginBlockStart: '0.4rem' }}>
-            Jot down places you want to visit next, and tick them off once you&apos;ve been!
+            {isOwner
+              ? "Jot down places you want to visit next, and tick them off once you've been!"
+              : 'Future dream destinations will appear here once added by the journal owner.'}
           </p>
-          {!showForm && (
+          {isOwner && !showForm && (
             <button
               type="button"
               className="btn-scrapbook"
@@ -442,7 +451,7 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({
                   </div>
                 )}
 
-                {isEditingNotes ? (
+                {isOwner && isEditingNotes ? (
                   <div style={{ display: 'grid', gap: '0.6rem' }}>
                     <label htmlFor={`edit-notes-${dest.id}`} className="field-hint">
                       Personal notes
@@ -485,49 +494,51 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({
                   </p>
                 )}
 
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem',
-                    marginBlockStart: 'auto',
-                    paddingBlockStart: '0.65rem',
-                    borderBlockStart: '1.5px dashed var(--ink-faint)',
-                  }}
-                >
-                  <button
-                    type="button"
-                    className="btn-scrapbook btn-scrapbook--sage"
-                    style={{ flex: '1 1 auto', minBlockSize: '38px', fontSize: '0.95rem' }}
-                    onClick={() => openMarkVisitedDialog(dest)}
-                  >
-                    <CheckCircle2 size={16} aria-hidden="true" />
-                    Mark as Visited
-                  </button>
-
-                  <button
-                    type="button"
-                    aria-label={`Edit notes for ${dest.name}`}
-                    className="btn-scrapbook btn-scrapbook--ghost"
-                    style={{ minBlockSize: '38px', padding: '0.3rem 0.7rem' }}
-                    onClick={() => {
-                      setEditingId(dest.id);
-                      setEditNotes(dest.wishlistNotes);
+                {isOwner && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
+                      marginBlockStart: 'auto',
+                      paddingBlockStart: '0.65rem',
+                      borderBlockStart: '1.5px dashed var(--ink-faint)',
                     }}
                   >
-                    <Edit3 size={15} aria-hidden="true" />
-                  </button>
+                    <button
+                      type="button"
+                      className="btn-scrapbook btn-scrapbook--sage"
+                      style={{ flex: '1 1 auto', minBlockSize: '38px', fontSize: '0.95rem' }}
+                      onClick={() => openMarkVisitedDialog(dest)}
+                    >
+                      <CheckCircle2 size={16} aria-hidden="true" />
+                      Mark as Visited
+                    </button>
 
-                  <button
-                    type="button"
-                    aria-label={`Delete ${dest.name} from wishlist`}
-                    className="btn-scrapbook btn-scrapbook--danger"
-                    style={{ minBlockSize: '38px', padding: '0.3rem 0.7rem' }}
-                    onClick={() => onDeleteDestination(dest)}
-                  >
-                    <Trash2 size={15} aria-hidden="true" />
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      aria-label={`Edit notes for ${dest.name}`}
+                      className="btn-scrapbook btn-scrapbook--ghost"
+                      style={{ minBlockSize: '38px', padding: '0.3rem 0.7rem' }}
+                      onClick={() => {
+                        setEditingId(dest.id);
+                        setEditNotes(dest.wishlistNotes);
+                      }}
+                    >
+                      <Edit3 size={15} aria-hidden="true" />
+                    </button>
+
+                    <button
+                      type="button"
+                      aria-label={`Delete ${dest.name} from wishlist`}
+                      className="btn-scrapbook btn-scrapbook--danger"
+                      style={{ minBlockSize: '38px', padding: '0.3rem 0.7rem' }}
+                      onClick={() => onDeleteDestination(dest)}
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
               </article>
             );
           })}

@@ -16,12 +16,14 @@ import {
 interface HomePageProps {
   destinations: Destination[];
   loading: boolean;
+  isOwner: boolean;
   onNavigate: (route: PageRoute) => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
   destinations,
   loading,
+  isOwner,
   onNavigate,
 }) => {
   const visited = destinations.filter((d) => !d.isWishlist);
@@ -107,23 +109,35 @@ export const HomePage: React.FC<HomePageProps> = ({
                 marginBlockStart: '1.5rem',
               }}
             >
-              <button
-                type="button"
-                className="btn-scrapbook btn-scrapbook--pink"
-                onClick={() => onNavigate({ page: 'add' })}
-              >
-                <PlusCircle size={19} aria-hidden="true" />
-                Add a Place
-              </button>
+              {isOwner && (
+                <button
+                  type="button"
+                  className="btn-scrapbook btn-scrapbook--pink"
+                  onClick={() => onNavigate({ page: 'add' })}
+                >
+                  <PlusCircle size={19} aria-hidden="true" />
+                  Add a Place
+                </button>
+              )}
 
               <button
                 type="button"
-                className="btn-scrapbook btn-scrapbook--ghost"
+                className={`btn-scrapbook ${isOwner ? 'btn-scrapbook--ghost' : 'btn-scrapbook--pink'}`}
                 onClick={() => onNavigate({ page: 'travels' })}
               >
                 Browse My Travels
                 <ArrowRight size={17} aria-hidden="true" />
               </button>
+
+              {!isOwner && (
+                <button
+                  type="button"
+                  className="btn-scrapbook btn-scrapbook--ghost"
+                  onClick={() => onNavigate({ page: 'map' })}
+                >
+                  Explore Travel Map
+                </button>
+              )}
             </div>
           </div>
 
@@ -322,7 +336,9 @@ export const HomePage: React.FC<HomePageProps> = ({
               <FoldedMapDoodle />
             </div>
           </div>
-          <h2 style={{ fontSize: '2.2rem' }}>Your first blank page awaits</h2>
+          <h2 style={{ fontSize: '2.2rem' }}>
+            {isOwner ? 'Your first blank page awaits' : 'No published adventures yet'}
+          </h2>
           <p
             style={{
               marginBlockStart: '0.5rem',
@@ -331,18 +347,21 @@ export const HomePage: React.FC<HomePageProps> = ({
               color: 'var(--ink-sepia)',
             }}
           >
-            Add your first destination with your own photographs and handwritten travel notes to
-            begin filling this journal.
+            {isOwner
+              ? 'Add your first destination with your own photographs and handwritten travel notes to begin filling this journal.'
+              : 'Check back soon—new travel memories and photographs will appear here once published.'}
           </p>
-          <button
-            type="button"
-            className="btn-scrapbook btn-scrapbook--sage"
-            style={{ marginBlockStart: '1.25rem' }}
-            onClick={() => onNavigate({ page: 'add' })}
-          >
-            <PlusCircle size={18} aria-hidden="true" />
-            Add Your First Place
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              className="btn-scrapbook btn-scrapbook--sage"
+              style={{ marginBlockStart: '1.25rem' }}
+              onClick={() => onNavigate({ page: 'add' })}
+            >
+              <PlusCircle size={18} aria-hidden="true" />
+              Add Your First Place
+            </button>
+          )}
         </section>
       ) : (
         <>
@@ -364,9 +383,11 @@ export const HomePage: React.FC<HomePageProps> = ({
                   Featured Travel Memories
                 </h2>
               </div>
-              <span className="field-hint">
-                Star any destination page to pin it here
-              </span>
+              {isOwner && (
+                <span className="field-hint">
+                  Star any destination page to pin it here
+                </span>
+              )}
             </div>
 
             {featuredMemories.length === 0 ? (

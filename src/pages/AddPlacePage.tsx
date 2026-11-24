@@ -48,6 +48,7 @@ export const AddPlacePage: React.FC<AddPlacePageProps> = ({
   const dateId = useId();
   const descId = useId();
   const featuredId = useId();
+  const publishedId = useId();
 
   const [name, setName] = useState('');
   const [country, setCountry] = useState('');
@@ -55,6 +56,7 @@ export const AddPlacePage: React.FC<AddPlacePageProps> = ({
   const [travelDate, setTravelDate] = useState('');
   const [description, setDescription] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isPublished, setIsPublished] = useState(true);
   const [paperTheme, setPaperTheme] = useState<PaperTheme>('sage');
   const [stickerMotif, setStickerMotif] = useState<StickerMotif>('aeroplane');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -98,6 +100,7 @@ export const AddPlacePage: React.FC<AddPlacePageProps> = ({
         isWishlist: false,
         wishlistNotes: '',
         isFeatured,
+        isPublished,
         latitude: resolvedCoords ? resolvedCoords.lat : null,
         longitude: resolvedCoords ? resolvedCoords.lng : null,
         paperTheme,
@@ -389,27 +392,50 @@ export const AddPlacePage: React.FC<AddPlacePageProps> = ({
             </div>
           </div>
 
-          <label
-            htmlFor={featuredId}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-note)',
-              fontSize: '1.1rem',
-            }}
-          >
-            <input
-              id={featuredId}
-              type="checkbox"
-              checked={isFeatured}
-              onChange={(e) => setIsFeatured(e.target.checked)}
-              style={{ inlineSize: '20px', blockSize: '20px', accentColor: 'var(--pink-deep)' }}
-            />
-            <Sparkles size={17} aria-hidden="true" style={{ color: 'var(--butter-deep)' }} />
-            Feature this travel memory on the Home page
-          </label>
+          <div style={{ display: 'grid', gap: '0.65rem' }}>
+            <label
+              htmlFor={featuredId}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-note)',
+                fontSize: '1.1rem',
+              }}
+            >
+              <input
+                id={featuredId}
+                type="checkbox"
+                checked={isFeatured}
+                onChange={(e) => setIsFeatured(e.target.checked)}
+                style={{ inlineSize: '20px', blockSize: '20px', accentColor: 'var(--pink-deep)' }}
+              />
+              <Sparkles size={17} aria-hidden="true" style={{ color: 'var(--butter-deep)' }} />
+              Feature this travel memory on the Home page
+            </label>
+
+            <label
+              htmlFor={publishedId}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-note)',
+                fontSize: '1.1rem',
+              }}
+            >
+              <input
+                id={publishedId}
+                type="checkbox"
+                checked={isPublished}
+                onChange={(e) => setIsPublished(e.target.checked)}
+                style={{ inlineSize: '20px', blockSize: '20px', accentColor: 'var(--sage-deep)' }}
+              />
+              Published (visible to visitors — uncheck to keep as a private draft)
+            </label>
+          </div>
 
           <div
             style={{

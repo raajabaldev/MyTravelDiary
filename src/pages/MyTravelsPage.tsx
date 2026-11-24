@@ -8,6 +8,7 @@ import { CameraDoodle, StarsDoodle, WashiTape } from '../components/ScrapbookDoo
 interface MyTravelsPageProps {
   destinations: Destination[];
   loading: boolean;
+  isOwner: boolean;
   onNavigate: (route: PageRoute) => void;
 }
 
@@ -16,6 +17,7 @@ type SortOption = 'recent-added' | 'travel-date-desc' | 'travel-date-asc' | 'nam
 export const MyTravelsPage: React.FC<MyTravelsPageProps> = ({
   destinations,
   loading,
+  isOwner,
   onNavigate,
 }) => {
   const searchId = useId();
@@ -104,14 +106,16 @@ export const MyTravelsPage: React.FC<MyTravelsPageProps> = ({
             <div style={{ inlineSize: '66px' }}>
               <StarsDoodle />
             </div>
-            <button
-              type="button"
-              className="btn-scrapbook btn-scrapbook--pink"
-              onClick={() => onNavigate({ page: 'add' })}
-            >
-              <PlusCircle size={18} aria-hidden="true" />
-              Add a Place
-            </button>
+            {isOwner && (
+              <button
+                type="button"
+                className="btn-scrapbook btn-scrapbook--pink"
+                onClick={() => onNavigate({ page: 'add' })}
+              >
+                <PlusCircle size={18} aria-hidden="true" />
+                Add a Place
+              </button>
+            )}
           </div>
         </div>
 
@@ -208,20 +212,24 @@ export const MyTravelsPage: React.FC<MyTravelsPageProps> = ({
             <CameraDoodle />
           </div>
           <h2 style={{ fontSize: '2.1rem', marginBlockStart: '0.6rem' }}>
-            No places recorded yet
+            {isOwner ? 'No places recorded yet' : 'No published travels yet'}
           </h2>
           <p style={{ color: 'var(--ink-sepia)', marginBlockStart: '0.4rem' }}>
-            Add your first travel memory to see your Polaroid gallery come alive.
+            {isOwner
+              ? 'Add your first travel memory to see your Polaroid gallery come alive.'
+              : 'Published destinations and photographs will appear here soon.'}
           </p>
-          <button
-            type="button"
-            className="btn-scrapbook btn-scrapbook--sage"
-            style={{ marginBlockStart: '1.2rem' }}
-            onClick={() => onNavigate({ page: 'add' })}
-          >
-            <PlusCircle size={18} aria-hidden="true" />
-            Add a Place
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              className="btn-scrapbook btn-scrapbook--sage"
+              style={{ marginBlockStart: '1.2rem' }}
+              onClick={() => onNavigate({ page: 'add' })}
+            >
+              <PlusCircle size={18} aria-hidden="true" />
+              Add a Place
+            </button>
+          )}
         </div>
       ) : filtered.length === 0 ? (
         <div className="paper-sheet" style={{ textAlign: 'center', paddingBlock: '2.5rem' }}>
@@ -256,7 +264,13 @@ export const MyTravelsPage: React.FC<MyTravelsPageProps> = ({
                 dateLabel={formatTravelDate(dest.travelDate)}
                 tapeTone={dest.paperTheme}
                 tiltIndex={idx}
-                badge={dest.isFeatured ? 'Featured' : undefined}
+                badge={
+                  !dest.isPublished
+                    ? 'Private Draft'
+                    : dest.isFeatured
+                      ? 'Featured'
+                      : undefined
+                }
                 onClick={() => onNavigate({ page: 'destination', id: dest.id })}
               />
             );

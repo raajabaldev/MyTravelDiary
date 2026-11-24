@@ -23,10 +23,12 @@ import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { revokeLocalPhotoUrls } from './lib/localJournalStore';
 import {
   addDestinationPhotos,
+  checkIsJournalOwner,
   createDestination,
   deleteDestination,
   deletePhoto,
   listDestinations,
+  revokeVisitorPhotoUrls,
   setCoverPhoto,
   updateDestination,
   updatePhotoCaption,
@@ -39,6 +41,7 @@ import { DestinationDetailPage } from './pages/DestinationDetailPage';
 import { WishlistPage } from './pages/WishlistPage';
 import { TravelMapPage } from './pages/TravelMapPage';
 import { AeroplaneDoodle } from './components/ScrapbookDoodles';
+import { OwnerLoginModal } from './components/OwnerLoginModal';
 
 function parseHashRoute(): PageRoute {
   const hash = window.location.hash.replace(/^#\/?/, '');
@@ -74,7 +77,9 @@ function toHashPath(route: PageRoute): string {
 export const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(!isSupabaseConfigured);
+  const [isVerifiedOwner, setIsVerifiedOwner] = useState(false);
   const [localPreviewActive, setLocalPreviewActive] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   const [route, setRoute] = useState<PageRoute>(() => parseHashRoute());
   const [destinations, setDestinations] = useState<Destination[]>([]);
@@ -82,27 +87,39 @@ export const App: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const backendMode: BackendMode | null = isSupabaseConfigured
-    ? session
-      ? 'supabase'
-      : null
+    ? 'supabase'
     : localPreviewActive
       ? 'local-preview'
       : null;
 
+  const isOwner =
+    backendMode === 'local-preview'
+      ? true
+      : Boolean(session && isVerifiedOwner);
+
+  const syncSessionAndOwner = useCallback(async (nextSession: Session | null) => {
+    setSession(nextSession);
+    if (nextSession) {
+      const ownerOk = await checkIsJournalOwner();
+      setIsVerifiedOwner(ownerOk);
+    } else {
+      setIsVerifiedOwner(false);
+    }
+    setAuthReady(true);
+  }, []);
+
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setAuthReady(true);
+      syncSessionAndOwner(data.session);
     });
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setAuthReady(true);
+      syncSessionAndOwner(nextSession);
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [syncSessionAndOwner]);
 
   useEffect(() => {
     const onHashChange = () => setRoute(parseHashRoute());
@@ -117,35 +134,34 @@ export const App: React.FC = () => {
   }, []);
 
   const refreshJournal = useCallback(async () => {
-    if (!backendMode) return;
+    if (!backendMode || !authReady) return;
     setLoading(true);
     setErrorMsg(null);
     try {
       if (backendMode === 'local-preview') {
         revokeLocalPhotoUrls();
+      } else {
+        revokeVisitorPhotoUrls();
       }
-      const list = await listDestinations(backendMode);
+      const list = await listDestinations(backendMode, { isOwner });
       setDestinations(list);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Unable to load journal.');
     } finally {
       setLoading(false);
     }
-  }, [backendMode]);
+  }, [backendMode, authReady, isOwner]);
 
   useEffect(() => {
-    if (backendMode) {
+    if (backendMode && authReady) {
       refreshJournal();
-    } else {
-      setDestinations([]);
     }
-  }, [backendMode, refreshJournal]);
+  }, [backendMode, authReady, refreshJournal]);
 
-  // Update page title dynamically for accessibility
   useEffect(() => {
     const baseTitle = "The Places I've Been";
     if (!backendMode) {
-      document.title = `Private Journal | ${baseTitle}`;
+      document.title = baseTitle;
       return;
     }
     switch (route.page) {
@@ -173,7 +189,7 @@ export const App: React.FC = () => {
   }, [route, destinations, backendMode]);
 
   const handleCreate = async (payload: CreateDestinationPayload): Promise<string> => {
-    if (!backendMode) throw new Error('Journal is locked.');
+    if (!backendMode || !isOwner) throw new Error('Owner access required.');
     const id = await createDestination(backendMode, payload);
     await refreshJournal();
     return id;
@@ -183,13 +199,13 @@ export const App: React.FC = () => {
     id: string,
     updates: UpdateDestinationPayload
   ): Promise<void> => {
-    if (!backendMode) throw new Error('Journal is locked.');
+    if (!backendMode || !isOwner) throw new Error('Owner access required.');
     await updateDestination(backendMode, id, updates);
     await refreshJournal();
   };
 
   const handleDeleteDestination = async (dest: Destination): Promise<void> => {
-    if (!backendMode) throw new Error('Journal is locked.');
+    if (!backendMode || !isOwner) throw new Error('Owner access required.');
     await deleteDestination(backendMode, dest);
     await refreshJournal();
     if (route.page === 'destination' && route.id === dest.id) {
@@ -198,19 +214,19 @@ export const App: React.FC = () => {
   };
 
   const handleAddPhotos = async (dest: Destination, drafts: NewPhotoDraft[]): Promise<void> => {
-    if (!backendMode) throw new Error('Journal is locked.');
+    if (!backendMode || !isOwner) throw new Error('Owner access required.');
     await addDestinationPhotos(backendMode, dest, drafts);
     await refreshJournal();
   };
 
   const handleSetCoverPhoto = async (destinationId: string, photoId: string): Promise<void> => {
-    if (!backendMode) throw new Error('Journal is locked.');
+    if (!backendMode || !isOwner) throw new Error('Owner access required.');
     await setCoverPhoto(backendMode, destinationId, photoId);
     await refreshJournal();
   };
 
   const handleUpdatePhotoCaption = async (photoId: string, caption: string): Promise<void> => {
-    if (!backendMode) throw new Error('Journal is locked.');
+    if (!backendMode || !isOwner) throw new Error('Owner access required.');
     await updatePhotoCaption(backendMode, photoId, caption);
     await refreshJournal();
   };
@@ -219,7 +235,7 @@ export const App: React.FC = () => {
     dest: Destination,
     photo: DestinationPhoto
   ): Promise<void> => {
-    if (!backendMode) throw new Error('Journal is locked.');
+    if (!backendMode || !isOwner) throw new Error('Owner access required.');
     await deletePhoto(backendMode, dest, photo);
     await refreshJournal();
   };
@@ -229,14 +245,17 @@ export const App: React.FC = () => {
       await supabase.auth.signOut();
     }
     setLocalPreviewActive(false);
-    setDestinations([]);
+    setIsVerifiedOwner(false);
+    if (route.page === 'add') {
+      navigate({ page: 'home' });
+    }
   };
 
   if (!authReady) {
     return (
       <main className="journal-shell" style={{ paddingBlockStart: '4rem', textAlign: 'center' }}>
         <p style={{ fontFamily: 'var(--font-hand)', fontSize: '2rem' }}>
-          Opening your travel diary...
+          Opening your travel scrapbook...
         </p>
       </main>
     );
@@ -275,31 +294,71 @@ export const App: React.FC = () => {
               </span>
               <span>
                 <span className="journal-brand-title">The Places I&apos;ve Been</span>
-                <span className="journal-brand-sub">Private Personal Travel Scrapbook</span>
+                <span className="journal-brand-sub">Personal Travel Scrapbook</span>
               </span>
             </button>
 
             <div className="journal-status-area">
-              <span
-                className={`postage-stamp ${
-                  backendMode === 'supabase' ? 'postage-stamp--sage' : 'postage-stamp--butter'
-                }`}
-              >
-                <Lock size={12} aria-hidden="true" />
-                {backendMode === 'supabase'
-                  ? 'Private Supabase Vault'
-                  : 'Local Browser Preview'}
-              </span>
-
-              <button
-                type="button"
-                className="btn-scrapbook btn-scrapbook--ghost"
-                style={{ minBlockSize: '36px', padding: '0.25rem 0.85rem', fontSize: '0.9rem' }}
-                onClick={handleSignOut}
-              >
-                <LogOut size={14} aria-hidden="true" />
-                {backendMode === 'supabase' ? 'Lock Journal' : 'Exit Preview'}
-              </button>
+              {backendMode === 'local-preview' ? (
+                <>
+                  <span className="postage-stamp postage-stamp--butter">
+                    Local Browser Preview
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-scrapbook btn-scrapbook--ghost"
+                    style={{ minBlockSize: '36px', padding: '0.25rem 0.85rem', fontSize: '0.9rem' }}
+                    onClick={handleSignOut}
+                  >
+                    <LogOut size={14} aria-hidden="true" />
+                    Exit Preview
+                  </button>
+                </>
+              ) : isOwner ? (
+                <>
+                  <span className="postage-stamp postage-stamp--sage">
+                    <Lock size={12} aria-hidden="true" />
+                    Owner Mode
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-scrapbook btn-scrapbook--ghost"
+                    style={{ minBlockSize: '36px', padding: '0.25rem 0.85rem', fontSize: '0.9rem' }}
+                    onClick={handleSignOut}
+                  >
+                    <LogOut size={14} aria-hidden="true" />
+                    Sign Out
+                  </button>
+                </>
+              ) : session ? (
+                <>
+                  <span className="postage-stamp">Read-Only Mode</span>
+                  <button
+                    type="button"
+                    className="btn-scrapbook btn-scrapbook--ghost"
+                    style={{ minBlockSize: '36px', padding: '0.25rem 0.85rem', fontSize: '0.9rem' }}
+                    onClick={handleSignOut}
+                  >
+                    <LogOut size={14} aria-hidden="true" />
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-scrapbook btn-scrapbook--ghost"
+                  style={{
+                    minBlockSize: '34px',
+                    padding: '0.2rem 0.8rem',
+                    fontSize: '0.84rem',
+                    opacity: 0.85,
+                  }}
+                  onClick={() => setLoginModalOpen(true)}
+                >
+                  <Lock size={13} aria-hidden="true" />
+                  Owner Login
+                </button>
+              )}
             </div>
           </div>
 
@@ -346,15 +405,17 @@ export const App: React.FC = () => {
               Travel Map
             </button>
 
-            <button
-              type="button"
-              className="nav-tab nav-tab-add"
-              aria-current={route.page === 'add' ? 'page' : undefined}
-              onClick={() => navigate({ page: 'add' })}
-            >
-              <PlusCircle size={17} aria-hidden="true" />
-              Add a Place
-            </button>
+            {isOwner && (
+              <button
+                type="button"
+                className="nav-tab nav-tab-add"
+                aria-current={route.page === 'add' ? 'page' : undefined}
+                onClick={() => navigate({ page: 'add' })}
+              >
+                <PlusCircle size={17} aria-hidden="true" />
+                Add a Place
+              </button>
+            )}
           </nav>
         </header>
 
@@ -369,6 +430,7 @@ export const App: React.FC = () => {
             <HomePage
               destinations={destinations}
               loading={loading}
+              isOwner={isOwner}
               onNavigate={navigate}
             />
           )}
@@ -377,22 +439,53 @@ export const App: React.FC = () => {
             <MyTravelsPage
               destinations={destinations}
               loading={loading}
+              isOwner={isOwner}
               onNavigate={navigate}
             />
           )}
 
-          {route.page === 'add' && (
-            <AddPlacePage
-              onCreate={handleCreate}
-              onSuccessNavigate={(newId) => navigate({ page: 'destination', id: newId })}
-              onCancel={() => navigate({ page: 'travels' })}
-            />
-          )}
+          {route.page === 'add' &&
+            (isOwner ? (
+              <AddPlacePage
+                onCreate={handleCreate}
+                onSuccessNavigate={(newId) => navigate({ page: 'destination', id: newId })}
+                onCancel={() => navigate({ page: 'travels' })}
+              />
+            ) : (
+              <div className="paper-sheet" style={{ textAlign: 'center', paddingBlock: '3rem' }}>
+                <Lock size={30} aria-hidden="true" style={{ marginInline: 'auto' }} />
+                <h1 id="main-heading" tabIndex={-1} style={{ fontSize: '2.2rem', marginBlockStart: '0.6rem' }}>
+                  Owner access required
+                </h1>
+                <p style={{ color: 'var(--ink-sepia)', marginBlockStart: '0.35rem' }}>
+                  Visitors can browse published scrapbook entries in read-only mode. Sign in as the
+                  journal owner to add a new place.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginBlockStart: '1.1rem' }}>
+                  <button
+                    type="button"
+                    className="btn-scrapbook btn-scrapbook--ghost"
+                    onClick={() => navigate({ page: 'home' })}
+                  >
+                    Back to Home
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-scrapbook btn-scrapbook--pink"
+                    onClick={() => setLoginModalOpen(true)}
+                  >
+                    <Lock size={16} aria-hidden="true" />
+                    Owner Login
+                  </button>
+                </div>
+              </div>
+            ))}
 
           {route.page === 'wishlist' && (
             <WishlistPage
               destinations={destinations}
               loading={loading}
+              isOwner={isOwner}
               onCreateWishlist={handleCreate}
               onUpdateDestination={handleUpdateDestination}
               onDeleteDestination={handleDeleteDestination}
@@ -404,6 +497,7 @@ export const App: React.FC = () => {
             <TravelMapPage
               destinations={destinations}
               loading={loading}
+              isOwner={isOwner}
               onNavigate={navigate}
             />
           )}
@@ -418,6 +512,7 @@ export const App: React.FC = () => {
             ) : activeDestination ? (
               <DestinationDetailPage
                 destination={activeDestination}
+                isOwner={isOwner}
                 onBack={() => navigate({ page: 'travels' })}
                 onUpdateDestination={handleUpdateDestination}
                 onDeleteDestination={handleDeleteDestination}
@@ -433,7 +528,7 @@ export const App: React.FC = () => {
                   Scrapbook page not found
                 </h1>
                 <p style={{ color: 'var(--ink-sepia)', marginBlockStart: '0.35rem' }}>
-                  This travel entry may have been removed or moved.
+                  This travel entry may be private or no longer available.
                 </p>
                 <button
                   type="button"
@@ -447,7 +542,14 @@ export const App: React.FC = () => {
             ))}
         </main>
       </div>
+
+      <OwnerLoginModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        onSuccess={() => {
+          /* auth state change triggers owner verification and reload */
+        }}
+      />
     </>
   );
 };
-

@@ -4,6 +4,8 @@ import {
   Calendar,
   Compass,
   Edit3,
+  Eye,
+  EyeOff,
   ImagePlus,
   MapPin,
   Save,
@@ -34,6 +36,7 @@ import {
 
 interface DestinationDetailPageProps {
   destination: Destination;
+  isOwner: boolean;
   onBack: () => void;
   onUpdateDestination: (id: string, updates: UpdateDestinationPayload) => Promise<void>;
   onDeleteDestination: (destination: Destination) => Promise<void>;
@@ -61,6 +64,7 @@ const STICKER_MOTIFS: Array<{ id: StickerMotif; label: string }> = [
 
 export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
   destination,
+  isOwner,
   onBack,
   onUpdateDestination,
   onDeleteDestination,
@@ -90,6 +94,7 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
   const [editTheme, setEditTheme] = useState<PaperTheme>(destination.paperTheme);
   const [editMotif, setEditMotif] = useState<StickerMotif>(destination.stickerMotif);
   const [editFeatured, setEditFeatured] = useState(destination.isFeatured);
+  const [editPublished, setEditPublished] = useState(destination.isPublished);
   const [editCoords, setEditCoords] = useState<{ lat: number; lng: number } | null>(
     destination.latitude !== null && destination.longitude !== null
       ? { lat: destination.latitude, lng: destination.longitude }
@@ -113,6 +118,7 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
     setEditTheme(destination.paperTheme);
     setEditMotif(destination.stickerMotif);
     setEditFeatured(destination.isFeatured);
+    setEditPublished(destination.isPublished);
     setEditCoords(
       destination.latitude !== null && destination.longitude !== null
         ? { lat: destination.latitude, lng: destination.longitude }
@@ -154,6 +160,7 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
         paperTheme: editTheme,
         stickerMotif: editMotif,
         isFeatured: editFeatured,
+        isPublished: editPublished,
         latitude: editCoords ? editCoords.lat : null,
         longitude: editCoords ? editCoords.lng : null,
       });
@@ -174,6 +181,20 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
       });
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Could not update featured status.');
+    } finally {
+      setBusyMessage(null);
+    }
+  };
+
+  const handleTogglePublished = async () => {
+    setErrorMsg(null);
+    setBusyMessage(destination.isPublished ? 'Switching to private draft...' : 'Publishing page...');
+    try {
+      await onUpdateDestination(destination.id, {
+        isPublished: !destination.isPublished,
+      });
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Could not update visibility.');
     } finally {
       setBusyMessage(null);
     }
@@ -260,48 +281,70 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
           Back to My Travels
         </button>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
-          <button
-            type="button"
-            aria-pressed={destination.isFeatured}
-            className={`btn-scrapbook ${destination.isFeatured ? '' : 'btn-scrapbook--ghost'}`}
-            onClick={handleToggleFeatured}
-            disabled={Boolean(busyMessage)}
-          >
-            <Sparkles size={16} aria-hidden="true" />
-            {destination.isFeatured ? 'Featured Memory' : 'Feature on Home'}
-          </button>
+        {isOwner && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+            <button
+              type="button"
+              aria-pressed={destination.isPublished}
+              className={`btn-scrapbook ${destination.isPublished ? 'btn-scrapbook--ghost' : ''}`}
+              onClick={handleTogglePublished}
+              disabled={Boolean(busyMessage)}
+            >
+              {destination.isPublished ? (
+                <>
+                  <Eye size={16} aria-hidden="true" />
+                  Published
+                </>
+              ) : (
+                <>
+                  <EyeOff size={16} aria-hidden="true" />
+                  Private Draft
+                </>
+              )}
+            </button>
 
-          <button
-            type="button"
-            className="btn-scrapbook btn-scrapbook--sage"
-            onClick={() => setShowAddPhotos((v) => !v)}
-            disabled={Boolean(busyMessage)}
-          >
-            <ImagePlus size={16} aria-hidden="true" />
-            Add Photos
-          </button>
+            <button
+              type="button"
+              aria-pressed={destination.isFeatured}
+              className={`btn-scrapbook ${destination.isFeatured ? '' : 'btn-scrapbook--ghost'}`}
+              onClick={handleToggleFeatured}
+              disabled={Boolean(busyMessage)}
+            >
+              <Sparkles size={16} aria-hidden="true" />
+              {destination.isFeatured ? 'Featured Memory' : 'Feature on Home'}
+            </button>
 
-          <button
-            type="button"
-            className="btn-scrapbook btn-scrapbook--ghost"
-            onClick={() => setIsEditing((v) => !v)}
-            disabled={Boolean(busyMessage)}
-          >
-            <Edit3 size={16} aria-hidden="true" />
-            {isEditing ? 'Close Editor' : 'Edit Page'}
-          </button>
+            <button
+              type="button"
+              className="btn-scrapbook btn-scrapbook--sage"
+              onClick={() => setShowAddPhotos((v) => !v)}
+              disabled={Boolean(busyMessage)}
+            >
+              <ImagePlus size={16} aria-hidden="true" />
+              Add Photos
+            </button>
 
-          <button
-            type="button"
-            className="btn-scrapbook btn-scrapbook--danger"
-            onClick={() => deleteDialogRef.current?.showModal()}
-            disabled={Boolean(busyMessage)}
-          >
-            <Trash2 size={16} aria-hidden="true" />
-            Delete Place
-          </button>
-        </div>
+            <button
+              type="button"
+              className="btn-scrapbook btn-scrapbook--ghost"
+              onClick={() => setIsEditing((v) => !v)}
+              disabled={Boolean(busyMessage)}
+            >
+              <Edit3 size={16} aria-hidden="true" />
+              {isEditing ? 'Close Editor' : 'Edit Page'}
+            </button>
+
+            <button
+              type="button"
+              className="btn-scrapbook btn-scrapbook--danger"
+              onClick={() => deleteDialogRef.current?.showModal()}
+              disabled={Boolean(busyMessage)}
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              Delete Place
+            </button>
+          </div>
+        )}
       </div>
 
       {errorMsg && (
@@ -433,7 +476,7 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
         </header>
 
         {/* Inline Edit Drawer */}
-        {isEditing && (
+        {isOwner && isEditing && (
           <form
             onSubmit={handleSaveEdits}
             className="paper-sheet paper-sheet--lined"
@@ -612,24 +655,45 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
               )}
             </div>
 
-            <label
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.55rem',
-                fontFamily: 'var(--font-note)',
-                fontSize: '1.05rem',
-                cursor: 'pointer',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={editFeatured}
-                onChange={(e) => setEditFeatured(e.target.checked)}
-                style={{ inlineSize: '18px', blockSize: '18px' }}
-              />
-              Feature this destination on the Home page
-            </label>
+            <div style={{ display: 'grid', gap: '0.5rem' }}>
+              <label
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.55rem',
+                  fontFamily: 'var(--font-note)',
+                  fontSize: '1.05rem',
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={editFeatured}
+                  onChange={(e) => setEditFeatured(e.target.checked)}
+                  style={{ inlineSize: '18px', blockSize: '18px' }}
+                />
+                Feature this destination on the Home page
+              </label>
+
+              <label
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.55rem',
+                  fontFamily: 'var(--font-note)',
+                  fontSize: '1.05rem',
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={editPublished}
+                  onChange={(e) => setEditPublished(e.target.checked)}
+                  style={{ inlineSize: '18px', blockSize: '18px' }}
+                />
+                Published (visible to visitors — uncheck to keep private)
+              </label>
+            </div>
 
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
               <button
@@ -648,7 +712,7 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
         )}
 
         {/* Add More Photos Drawer */}
-        {showAddPhotos && (
+        {isOwner && showAddPhotos && (
           <div
             className="paper-sheet"
             style={{
@@ -735,8 +799,9 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
               </div>
             ) : (
               <p style={{ color: 'var(--ink-sepia)', fontStyle: 'italic' }}>
-                No written memories added yet. Click &ldquo;Edit Page&rdquo; to jot down your
-                story here.
+                {isOwner
+                  ? 'No written memories added yet. Click "Edit Page" to jot down your story here.'
+                  : 'No written notes were added for this destination.'}
               </p>
             )}
           </section>
@@ -777,15 +842,17 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
                 <p style={{ color: 'var(--ink-sepia)' }}>
                   No photographs taped onto this page yet.
                 </p>
-                <button
-                  type="button"
-                  className="btn-scrapbook btn-scrapbook--sage"
-                  style={{ marginBlockStart: '1rem' }}
-                  onClick={() => setShowAddPhotos(true)}
-                >
-                  <ImagePlus size={17} aria-hidden="true" />
-                  Add Photographs
-                </button>
+                {isOwner && (
+                  <button
+                    type="button"
+                    className="btn-scrapbook btn-scrapbook--sage"
+                    style={{ marginBlockStart: '1rem' }}
+                    onClick={() => setShowAddPhotos(true)}
+                  >
+                    <ImagePlus size={17} aria-hidden="true" />
+                    Add Photographs
+                  </button>
+                )}
               </div>
             ) : (
               <div
@@ -855,67 +922,71 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
                         </div>
                       </button>
 
-                      <figcaption
-                        className="polaroid-caption"
-                        style={{
-                          minBlockSize: '1.6rem',
-                          fontSize: '1.25rem',
-                          color: photo.caption ? 'var(--ink-espresso)' : 'var(--ink-muted)',
-                        }}
-                      >
-                        {photo.caption || 'Click photo to add a note'}
-                      </figcaption>
-
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.4rem',
-                          marginBlockStart: '0.55rem',
-                        }}
-                      >
-                        <button
-                          type="button"
-                          className={`btn-scrapbook ${photo.isCover ? '' : 'btn-scrapbook--ghost'}`}
-                          disabled={photo.isCover || Boolean(busyMessage)}
-                          onClick={() => onSetCoverPhoto(destination.id, photo.id)}
+                      {(photo.caption || isOwner) && (
+                        <figcaption
+                          className="polaroid-caption"
                           style={{
-                            minBlockSize: '32px',
-                            padding: '0.2rem 0.65rem',
-                            fontSize: '0.84rem',
+                            minBlockSize: '1.6rem',
+                            fontSize: '1.25rem',
+                            color: photo.caption ? 'var(--ink-espresso)' : 'var(--ink-muted)',
                           }}
                         >
-                          <Star
-                            size={13}
-                            aria-hidden="true"
-                            fill={photo.isCover ? 'currentColor' : 'none'}
-                          />
-                          {photo.isCover ? 'Cover' : 'Set Cover'}
-                        </button>
+                          {photo.caption || 'Click photo to add a note'}
+                        </figcaption>
+                      )}
 
-                        <button
-                          type="button"
-                          className="btn-scrapbook btn-scrapbook--danger"
-                          aria-label={`Delete photograph ${index + 1}`}
-                          disabled={Boolean(busyMessage)}
-                          onClick={() => {
-                            if (photoDeleteConfirm?.id === photo.id) {
-                              handleConfirmPhotoDelete(photo);
-                            } else {
-                              setPhotoDeleteConfirm(photo);
-                            }
-                          }}
+                      {isOwner && (
+                        <div
                           style={{
-                            minBlockSize: '32px',
-                            padding: '0.2rem 0.65rem',
-                            fontSize: '0.82rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.4rem',
+                            marginBlockStart: '0.55rem',
                           }}
                         >
-                          <Trash2 size={13} aria-hidden="true" />
-                          {photoDeleteConfirm?.id === photo.id ? 'Confirm?' : 'Remove'}
-                        </button>
-                      </div>
+                          <button
+                            type="button"
+                            className={`btn-scrapbook ${photo.isCover ? '' : 'btn-scrapbook--ghost'}`}
+                            disabled={photo.isCover || Boolean(busyMessage)}
+                            onClick={() => onSetCoverPhoto(destination.id, photo.id)}
+                            style={{
+                              minBlockSize: '32px',
+                              padding: '0.2rem 0.65rem',
+                              fontSize: '0.84rem',
+                            }}
+                          >
+                            <Star
+                              size={13}
+                              aria-hidden="true"
+                              fill={photo.isCover ? 'currentColor' : 'none'}
+                            />
+                            {photo.isCover ? 'Cover' : 'Set Cover'}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="btn-scrapbook btn-scrapbook--danger"
+                            aria-label={`Delete photograph ${index + 1}`}
+                            disabled={Boolean(busyMessage)}
+                            onClick={() => {
+                              if (photoDeleteConfirm?.id === photo.id) {
+                                handleConfirmPhotoDelete(photo);
+                              } else {
+                                setPhotoDeleteConfirm(photo);
+                              }
+                            }}
+                            style={{
+                              minBlockSize: '32px',
+                              padding: '0.2rem 0.65rem',
+                              fontSize: '0.82rem',
+                            }}
+                          >
+                            <Trash2 size={13} aria-hidden="true" />
+                            {photoDeleteConfirm?.id === photo.id ? 'Confirm?' : 'Remove'}
+                          </button>
+                        </div>
+                      )}
                     </figure>
                   );
                 })}
@@ -988,70 +1059,81 @@ export const DestinationDetailPage: React.FC<DestinationDetailPageProps> = ({
               />
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gap: '0.75rem',
-                marginBlockStart: '1rem',
-              }}
-            >
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <label htmlFor="lightbox-caption-input" className="field-hint" style={{ inlineSize: '100%' }}>
-                  Handwritten caption
-                </label>
-                <input
-                  id="lightbox-caption-input"
-                  type="text"
-                  className="field-input"
-                  style={{ flex: '1 1 220px', fontFamily: 'var(--font-hand)', fontSize: '1.25rem' }}
-                  value={captionDraft}
-                  onChange={(e) => setCaptionDraft(e.target.value)}
-                  placeholder="Write a personal note for this photograph..."
-                />
-                <button
-                  type="button"
-                  className="btn-scrapbook btn-scrapbook--sage"
-                  onClick={handleSaveCaption}
-                  disabled={Boolean(busyMessage)}
-                >
-                  <Save size={15} aria-hidden="true" />
-                  Save Note
-                </button>
-              </div>
-
+            {isOwner ? (
               <div
                 style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                  gap: '0.6rem',
+                  display: 'grid',
+                  gap: '0.75rem',
+                  marginBlockStart: '1rem',
                 }}
               >
-                <button
-                  type="button"
-                  className={`btn-scrapbook ${activePhoto.isCover ? '' : 'btn-scrapbook--ghost'}`}
-                  disabled={activePhoto.isCover || Boolean(busyMessage)}
-                  onClick={() => onSetCoverPhoto(destination.id, activePhoto.id)}
-                >
-                  <Star
-                    size={15}
-                    aria-hidden="true"
-                    fill={activePhoto.isCover ? 'currentColor' : 'none'}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <label htmlFor="lightbox-caption-input" className="field-hint" style={{ inlineSize: '100%' }}>
+                    Handwritten caption
+                  </label>
+                  <input
+                    id="lightbox-caption-input"
+                    type="text"
+                    className="field-input"
+                    style={{ flex: '1 1 220px', fontFamily: 'var(--font-hand)', fontSize: '1.25rem' }}
+                    value={captionDraft}
+                    onChange={(e) => setCaptionDraft(e.target.value)}
+                    placeholder="Write a personal note for this photograph..."
                   />
-                  {activePhoto.isCover ? 'Current Cover Photo' : 'Set as Cover Photo'}
-                </button>
+                  <button
+                    type="button"
+                    className="btn-scrapbook btn-scrapbook--sage"
+                    onClick={handleSaveCaption}
+                    disabled={Boolean(busyMessage)}
+                  >
+                    <Save size={15} aria-hidden="true" />
+                    Save Note
+                  </button>
+                </div>
 
-                <button
-                  type="button"
-                  className="btn-scrapbook btn-scrapbook--danger"
-                  disabled={Boolean(busyMessage)}
-                  onClick={() => handleConfirmPhotoDelete(activePhoto)}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'space-between',
+                    gap: '0.6rem',
+                  }}
                 >
-                  <Trash2 size={15} aria-hidden="true" />
-                  Delete Photograph
-                </button>
+                  <button
+                    type="button"
+                    className={`btn-scrapbook ${activePhoto.isCover ? '' : 'btn-scrapbook--ghost'}`}
+                    disabled={activePhoto.isCover || Boolean(busyMessage)}
+                    onClick={() => onSetCoverPhoto(destination.id, activePhoto.id)}
+                  >
+                    <Star
+                      size={15}
+                      aria-hidden="true"
+                      fill={activePhoto.isCover ? 'currentColor' : 'none'}
+                    />
+                    {activePhoto.isCover ? 'Current Cover Photo' : 'Set as Cover Photo'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn-scrapbook btn-scrapbook--danger"
+                    disabled={Boolean(busyMessage)}
+                    onClick={() => handleConfirmPhotoDelete(activePhoto)}
+                  >
+                    <Trash2 size={15} aria-hidden="true" />
+                    Delete Photograph
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              activePhoto.caption && (
+                <p
+                  className="polaroid-caption"
+                  style={{ marginBlockStart: '0.9rem', fontSize: '1.45rem' }}
+                >
+                  {activePhoto.caption}
+                </p>
+              )
+            )}
           </div>
         )}
       </dialog>
